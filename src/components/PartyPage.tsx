@@ -8,9 +8,10 @@ import SpotifyWebApi from 'spotify-web-api-js';
 import lodash from "lodash";
 
 import "./styles.css";
-import { expressWSAddr } from './constants';
-import { StickyFooter, SongSearch, SongInfo, SearchResults } from "./components";
-import mui_config from './mui_config';
+import { expressWSAddr } from '../constants';
+import { StickyFooter, SongSearch, SongInfo, SearchResults } from "./";
+// TODO: move to more appropriate location
+import mui_config from '../mui_config';
 
 
 const spotify = new SpotifyWebApi();
@@ -19,6 +20,7 @@ const URLParams = new URLSearchParams(queryString);
 
 const spotifyClientId = '28e66594625340b9a0ef78891d0764ff';
 const redirect_uri = 'http://localhost:3000';
+
 
 if (!URLParams.has('code')) {
   const scopes = 'user-read-private';
@@ -100,7 +102,7 @@ async function updateSongs(searchText: string): Promise<SongInfo[]>{
   }
 } 
 
-function App() {
+export function PartyPage() {
   
   const footerContent = <h2>Footer</h2>;
 
@@ -151,7 +153,4 @@ function App() {
       </div>
     </ThemeProvider>
   );
-}
 
-
-export default App;
