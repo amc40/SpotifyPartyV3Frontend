@@ -1,4 +1,5 @@
 import React from "react";
+import { Redirect } from 'react-router-dom'
 import { ThemeProvider } from "@material-ui/styles";
 import { createMuiTheme } from "@material-ui/core";
 import { ChevronLeft, MenuRounded, ChevronRight } from "@material-ui/icons";
@@ -7,77 +8,16 @@ import { makeStyles } from '@material-ui/styles';
 import SpotifyWebApi from 'spotify-web-api-js';
 import lodash from "lodash";
 
-import "./styles.css";
-import { expressWSAddr } from '../constants';
+import "../styles.css";
+import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie } from '../constants';
+import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken } from '../scripts';
 import { StickyFooter, SongSearch, SongInfo, SearchResults } from "./";
 // TODO: move to more appropriate location
 import mui_config from '../mui_config';
 
 
 const spotify = new SpotifyWebApi();
-const queryString = window.location.search;
-const URLParams = new URLSearchParams(queryString);
 
-const spotifyClientId = '28e66594625340b9a0ef78891d0764ff';
-const redirect_uri = 'http://localhost:3000';
-
-
-if (!URLParams.has('code')) {
-  const scopes = 'user-read-private';
-  
-  window.location.href = 'https://accounts.spotify.com/authorize' +
-  '?response_type=code' +
-  '&client_id=' + spotifyClientId +
-  (scopes ? '&scope=' + encodeURIComponent(scopes) : '') +
-  '&redirect_uri=' + encodeURIComponent(redirect_uri);
-}
-const accessCode = URLParams.get('code') as string;
-
-async function refreshAccessToken(refreshToken: string) {
-  console.log('refreshing access token with refresh token ' + refreshToken);
-  const spotifyTokenData = new URLSearchParams();
-  spotifyTokenData.append('refresh_token', refreshToken);
-  const rawSpotifyTokenResponse = await fetch(expressWSAddr + '/api/spotify_tokens/refresh?' + spotifyTokenData.toString(), {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
-  });
-  const tokenResponseContent = await rawSpotifyTokenResponse.json();
-  const accessToken = tokenResponseContent.access_token;
-  const refreshSeconds = tokenResponseContent.refresh_seconds;
-  console.log('refreshed access token');
-  spotify.setAccessToken(accessToken);
-  // refresh half the interval it expires in in order to ensure that we have the time to perform the request.
-  setTimeout(refreshAccessToken, 5000, refreshToken);
-}
-
-async function getAccessToken() {
-  //TODO: handle errors
-  console.log('getting access token');
-  const spotifyTokenData = new URLSearchParams();
-  spotifyTokenData.append('authorization_code', accessCode);
-  const rawSpotifyTokenResponse = await fetch(expressWSAddr + '/api/spotify_tokens/new?' + spotifyTokenData.toString(), {
-    method: 'GET',
-    headers: {
-      'Accept': 'application/json',
-      'Content-Type': 'application/json'
-    }
-  });
-  const tokenResponseContent = await rawSpotifyTokenResponse.json();
-  const accessToken = tokenResponseContent.access_token;
-  const refreshSeconds = tokenResponseContent.refresh_seconds;
-  const refreshToken = tokenResponseContent.refresh_token;
-  console.log('got access token ' + accessToken);
-  spotify.setAccessToken(accessToken);
-  console.log('refresh token ' + refreshToken);
-  // refresh half the interval it expires in in order to ensure that we have the time to perform the request.
-  setTimeout(refreshAccessToken,  5000, refreshToken);
-};
-
-
-getAccessToken();
 
 const theme = createMuiTheme();
 
@@ -103,54 +43,112 @@ async function updateSongs(searchText: string): Promise<SongInfo[]>{
 } 
 
 export function PartyPage() {
+
+    const [navigateToHomepage, setNavigateToHomepage] = React.useState(false); 
+
+    const renderRedirectToHomepage = () => {
+        if (navigateToHomepage) {
+            return <Redirect to='/' />;
+        }
+    }
+
+    function handleMissingCookies() {
+        //navigate home if don't have necessary cookies
+        setNavigateToHomepage(true);
+    }
+
+    function handleRefreshedToken(refreshToken: string, accessToken: string, refreshSeconds: number) {
+        spotify.setAccessToken(accessToken);
+        setTimeout(refreshAccessToken, secondsBeforeActuallyRefreshAccessToken(refreshSeconds), refreshToken, {
+            handleRefreshedToken,
+            handleFailedTokenRefresh
+        });
+    }
+
+    function handleFailedTokenRefresh(refreshToken: string) {
+        // TODO: limit number of times to prevent infinite recursion
+        refreshAccessToken(refreshToken, {
+            handleRefreshedToken,
+            handleFailedTokenRefresh
+        });
+    }
+
+    function onPartyPageLoad() {
+        const accessToken = getCookie(spotifyAccessTokenCookie);
+        const refreshTime = getCookie(spotifyAccessTokenRefreshTimeCookie);
+        const refreshToken = getCookie(spotifyRefreshTokenCookie);
+        console.log(`accessToken: ${accessToken}, refreshTime: ${refreshTime}, refreshToken: ${refreshToken}`);
+        if (accessToken !== undefined && refreshTime !== undefined && refreshToken !== undefined) {
+            console.log('got access token, refresh time, and refresh token');
+            spotify.setAccessToken(accessToken);
+            const currentTime = new Date().getTime();
+            const msToRefresh = parseInt(refreshTime) - currentTime;
+            if (msToRefresh > 0) {
+                setTimeout(refreshAccessToken, msToRefresh, refreshToken, {
+                    handleRefreshedToken,
+                    handleFailedTokenRefresh
+                });
+            } else {
+                refreshAccessToken(refreshToken, {
+                    handleRefreshedToken,
+                    handleFailedTokenRefresh
+                });
+            }
+        } else {
+            console.log('missing cookies');
+            handleMissingCookies();
+        }
+    }
+
+    React.useEffect(onPartyPageLoad, []);
   
-  const footerContent = <h2>Footer</h2>;
+    const footerContent = <h2>Footer</h2>;
 
-  const useDrawerStyles = makeStyles({
-    paper: {
-      backgroundColor: '#030303',
-      color: 'white',
-      border: 'none',
-    },
-  });
-
-
-  const drawerStyles =  useDrawerStyles();
-
-  const initialSearchText = 'Search...';
-
-  const [tracks, setTracks] = React.useState([] as SongInfo[]);
-
-  function handleSearch(newSearchText: string) {
-    console.log(`New Search Text: ${newSearchText}`);
-    updateSongs(newSearchText).then(newSongs => {
-      console.log("calling result for", newSearchText);
-      setTracks(newSongs);
+    const useDrawerStyles = makeStyles({
+        paper: {
+        backgroundColor: '#030303',
+        color: 'white',
+        border: 'none',
+        },
     });
-  }
 
-  const content = <SearchResults songs={tracks}/>;
-  return (
+
+    const drawerStyles =  useDrawerStyles();
+
+    const initialSearchText = 'Search...';
+
+    const [tracks, setTracks] = React.useState([] as SongInfo[]);
+
+    function handleSearch(newSearchText: string) {
+        console.log(`New Search Text: ${newSearchText}`);
+        updateSongs(newSearchText).then(newSongs => {
+            console.log("calling result for", newSearchText);
+            setTracks(newSongs);
+        });
+    }
+
+    const content = <SearchResults songs={tracks}/>;
+    return (
     <ThemeProvider theme={theme}>
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-        <Root config={mui_config}>
-          <Header
+        {renderRedirectToHomepage()}
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <Root config={mui_config}>
+            <Header
             renderMenuIcon={(open: boolean) => (open ? <ChevronLeft /> : <MenuRounded />)}
-          >
-            <SongSearch initialSearchText={initialSearchText} onSearchTextUpdated={lodash.debounce(handleSearch, 500)}/>
-          </Header>
-          <Nav
+            >
+                <SongSearch initialSearchText={initialSearchText} onSearchTextUpdated={lodash.debounce(handleSearch, 500)}/>
+            </Header>
+            <Nav
             renderIcon={(collapsed: boolean)=>
-              collapsed ? <ChevronRight /> : <ChevronLeft />
+            collapsed ? <ChevronRight /> : <ChevronLeft />
             }
             classes={drawerStyles}
-          >
-            Nav
-          </Nav>
-          <StickyFooter contentBody={content} footerHeight={100} footer={footerContent}/>
-          
+            >
+                Nav
+            </Nav>
+            <StickyFooter contentBody={content} footerHeight={100} footer={footerContent}/>
         </Root>
-      </div>
+        </div>
     </ThemeProvider>
-  );
-
+    );
+}
