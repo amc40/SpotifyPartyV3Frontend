@@ -1,4 +1,4 @@
-import { spotifyClientId, spotifyScopes, spotifyRedirectUri } from '../../constants';
+import { spotifyClientId, spotifyScopes, spotifyRedirectUri } from '../../common/constants';
 
 function getSpotifyAuthUrl(): string {
    return 'https://accounts.spotify.com/authorize' +

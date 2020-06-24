@@ -9,12 +9,13 @@ import SpotifyWebApi from 'spotify-web-api-js';
 import lodash from "lodash";
 
 import "../styles.css";
-import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie } from '../constants';
+import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie } from '../common/constants';
 import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken, getNewPartyId } from '../scripts';
-import { StickyFooter, SongSearch, SongInfo, SearchResults } from "./";
+import { StickyFooter, SongSearch, SearchResults } from "./";
 // TODO: move to more appropriate location
 import mui_config from '../mui_config';
 import { ActiveDevices } from "./ActiveDevices";
+import { SongInfo } from "../common/interfaces";
 
 
 const spotify = new SpotifyWebApi();

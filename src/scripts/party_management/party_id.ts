@@ -1,4 +1,4 @@
-import  { expressWSAddr } from '../../constants'
+import  { expressWSAddr } from '../../common/constants'
 
 export async function getNewPartyId() {
     try {

@@ -1,7 +1,7 @@
 import * as React from 'react';
 
-import  {SongInfo} from './index';
 import { addTrackToParty } from '../scripts';
+import { SongInfo } from '../common/interfaces';
 
 interface Props {
     songs: SongInfo[],

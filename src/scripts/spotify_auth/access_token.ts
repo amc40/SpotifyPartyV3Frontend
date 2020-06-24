@@ -1,4 +1,4 @@
-import { expressWSAddr } from '../../constants';
+import { expressWSAddr } from '../../common/constants';
 
 interface NewAccessTokenCallbacks {
     handleNewAccessToken(accessToken: string, refreshSeconds: number, refreshToken: string) : void;

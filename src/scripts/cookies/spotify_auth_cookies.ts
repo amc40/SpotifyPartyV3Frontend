@@ -1,5 +1,5 @@
 import { setCookie } from './cookies'; 
-import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie} from '../../constants';
+import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie} from '../../common/constants';
 import { timeToRefresh } from '../';
 
 export function setSpotifyAuthCookies(accessToken: string, refreshSeconds: number, refreshToken: string) {
