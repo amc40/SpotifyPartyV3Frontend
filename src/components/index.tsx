@@ -8,4 +8,6 @@ export { AuthenticationPage } from './AuthenticationPage';
 export interface SongInfo {
     name: string; 
     uri: string;
+    album: string;
+    artists: string[]
 }

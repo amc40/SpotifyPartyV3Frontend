@@ -10,10 +10,11 @@ import lodash from "lodash";
 
 import "../styles.css";
 import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie } from '../constants';
-import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken } from '../scripts';
+import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken, getNewPartyId } from '../scripts';
 import { StickyFooter, SongSearch, SongInfo, SearchResults } from "./";
 // TODO: move to more appropriate location
 import mui_config from '../mui_config';
+import { ActiveDevices } from "./ActiveDevices";
 
 
 const spotify = new SpotifyWebApi();
@@ -30,7 +31,12 @@ async function updateSongs(searchText: string): Promise<SongInfo[]>{
       // if access token has been set 
       const res = await spotify.searchTracks(searchText, {limit: 10});
       const tracks = res.tracks.items.map((trackInfo) => { 
-        return {name: trackInfo.name, uri: trackInfo.uri};
+        return {
+            name: trackInfo.name, 
+            uri: trackInfo.uri, 
+            album: trackInfo.album.name, 
+            artists: trackInfo.artists.map(artist => artist.name)
+        };
       });
       console.log(tracks);
       return tracks;
@@ -101,6 +107,25 @@ export function PartyPage() {
     }
 
     React.useEffect(onPartyPageLoad, []);
+
+    function handleCouldNotSetPartyId() {
+        // TODO: display message
+        setNavigateToHomepage(true);
+    }
+
+    const [partyId, setPartyId] = React.useState(undefined as undefined | string);
+
+    async function fetchPartyId() {
+        const newPartyId = await getNewPartyId();
+        if (newPartyId) {
+            setPartyId(newPartyId);
+            console.log('got new party id:', newPartyId);
+        } else {
+            handleCouldNotSetPartyId();
+        }
+    }
+
+    React.useEffect(() => {fetchPartyId();}, []);
   
     const footerContent = <h2>Footer</h2>;
 
@@ -127,7 +152,7 @@ export function PartyPage() {
         });
     }
 
-    const content = <SearchResults songs={tracks}/>;
+    const content = partyId? <SearchResults songs={tracks} partyId={partyId}/>: undefined;
     return (
     <ThemeProvider theme={theme}>
         {renderRedirectToHomepage()}
