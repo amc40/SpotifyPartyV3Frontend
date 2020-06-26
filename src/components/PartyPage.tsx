@@ -1,6 +1,6 @@
 import React from "react";
 import { Redirect } from 'react-router-dom'
-import { ThemeProvider } from "@material-ui/styles";
+import { ThemeProvider, CSSProperties } from "@material-ui/styles";
 import { createMuiTheme } from "@material-ui/core";
 import { ChevronLeft, MenuRounded, ChevronRight } from "@material-ui/icons";
 import { Root, Header, Nav } from "mui-layout";
@@ -10,12 +10,15 @@ import lodash from "lodash";
 
 import "../styles.css";
 import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie } from '../common/constants';
-import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken, getNewPartyId } from '../scripts';
+import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken, getNewPartyId, getQueuedTracksForParty } from '../scripts';
 import { StickyFooter, SongSearch, SearchResults } from "./";
 // TODO: move to more appropriate location
 import mui_config from '../mui_config';
-import { ActiveDevices } from "./ActiveDevices";
-import { SongInfo } from "../common/interfaces";
+import { SongInfo, QueuedSongInfo } from "../common/interfaces";
+import { PartySongs } from "./PartySongs";
+import { PartyVotesProvider } from "../common/partyVotesContext";
+
+const partySongRefreshMs = 500;
 
 
 const spotify = new SpotifyWebApi();
@@ -116,19 +119,16 @@ export function PartyPage() {
 
     const [partyId, setPartyId] = React.useState(undefined as undefined | string);
 
-    async function fetchPartyId() {
-        const newPartyId = await getNewPartyId();
-        if (newPartyId) {
-            setPartyId(newPartyId);
-            console.log('got new party id:', newPartyId);
-        } else {
-            handleCouldNotSetPartyId();
-        }
-    }
-
-    React.useEffect(() => {fetchPartyId();}, []);
-  
-    const footerContent = <h2>Footer</h2>;
+    React.useEffect(() => {
+        getNewPartyId().then((newPartyId) => {
+            if (newPartyId) {
+                setPartyId(newPartyId);
+                console.log('got new party id:', newPartyId);
+            } else {
+                handleCouldNotSetPartyId();
+            }
+        })
+    }, []);
 
     const useDrawerStyles = makeStyles({
         paper: {
@@ -143,38 +143,159 @@ export function PartyPage() {
 
     const initialSearchText = 'Search...';
 
-    const [tracks, setTracks] = React.useState([] as SongInfo[]);
+    const [searching, setSearching] = React.useState(false);
+
+    function handleStartSearch() {
+        setSearching(true);
+    }
+
+    const [searchTracks, setSearchTracks] = React.useState([] as SongInfo[]);
 
     function handleSearch(newSearchText: string) {
         console.log(`New Search Text: ${newSearchText}`);
         updateSongs(newSearchText).then(newSongs => {
             console.log("calling result for", newSearchText);
-            setTracks(newSongs);
+            setSearchTracks(newSongs);
         });
     }
 
-    const content = partyId? <SearchResults songs={tracks} partyId={partyId}/>: undefined;
-    return (
-    <ThemeProvider theme={theme}>
-        {renderRedirectToHomepage()}
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <Root config={mui_config}>
-            <Header
-            renderMenuIcon={(open: boolean) => (open ? <ChevronLeft /> : <MenuRounded />)}
-            >
-                <SongSearch initialSearchText={initialSearchText} onSearchTextUpdated={lodash.debounce(handleSearch, 500)}/>
-            </Header>
-            <Nav
-            renderIcon={(collapsed: boolean)=>
-            collapsed ? <ChevronRight /> : <ChevronLeft />
+
+    const [ partySongs, setPartySongs ] = React.useState([] as QueuedSongInfo[]);
+    
+    const handleFailedTrackRefresh = () => {
+        console.log('Could not refresh tracks.');
+        // TODO: display toast after repeated failure
+    }
+
+    const handleNewTracks = (newTracks: QueuedSongInfo[]) => {
+        setPartySongs(newTracks);
+    }
+
+    React.useEffect(() => {
+        if (partyId) {
+            console.log('setting up refresh of tracks.');
+            const refreshQueuedTracks = setInterval(() => {
+                const callbacks = {
+                    handleSuccessfulGetQueuedTracks: handleNewTracks,
+                    handleFailedGetQueuedTracks: handleFailedTrackRefresh
+                };
+                getQueuedTracksForParty(
+                    partyId,
+                    callbacks
+                )
+            }, partySongRefreshMs);
+            // removes after component is unmounted.
+            return () => {
+                clearInterval(refreshQueuedTracks);
+                console.log('clearing refresh of tracks on unmount');
+            };
+        }
+    }, [partyId]);
+
+    function getMainScreenContent() {
+        if (!partyId) {
+            // party has not yet been initialised
+            return undefined;
+        }
+        if (searching) {
+            // if we are searching display the search results
+            return <SearchResults songs={searchTracks} partyId={partyId}/>;
+        } else {
+            // otherwise we just view the songs in the party
+            return <PartySongs partyId={partyId} partySongs={partySongs}/>;
+        }
+    }
+
+    const mainScreenContent = getMainScreenContent();
+
+    function handleSearchCancelled() {
+        setSearching(false);
+    }
+
+    const cancelSearchButton = searching ? 
+        <button onClick={handleSearchCancelled}>
+            Cancel
+        </button>
+        : undefined;
+
+    const headerContent = (
+        <>
+            <SongSearch 
+                        initialSearchText={initialSearchText} 
+                        onSearchTextUpdated={lodash.debounce(handleSearch, 500)}
+                        onStartSearch={handleStartSearch}/>
+            {cancelSearchButton}
+        </>
+    );
+
+    //TODO: get initial state from server
+    const [partyStarted, setPartyStarted] = React.useState(false);
+
+    const readyToStartParty = React.useCallback(() => {
+        return partySongs.length >= 2;
+    }, [partySongs])
+
+    const getFooterContent = React.useCallback(() => {
+        if (partyStarted) {
+            //TODO: fill with currently playing and next up
+            return <h2>TODO: fill with currently playing and next up</h2>;
+        } else {
+            // TODO: hosting as state.
+            const centredStyle: CSSProperties = {
+                display: 'flex',
+                justifyContent: 'center'
+            };
+            const hosting = true;
+            if (hosting) {
+                if (readyToStartParty()) {
+                    return (
+                        <div style={centredStyle}>
+                            <button>Start Party</button>
+                        </div>
+                    );
+                } else {
+                    return (
+                        <div style={centredStyle}>
+                            You must add at least 2 songs to start the party!
+                        </div>
+                    );
+                }
+            } else {
+                return (
+                    <div style={centredStyle}>
+                        Waiting for Host to Start ...
+                    </div>
+                );
             }
-            classes={drawerStyles}
-            >
-                Nav
-            </Nav>
-            <StickyFooter contentBody={content} footerHeight={100} footer={footerContent}/>
-        </Root>
-        </div>
-    </ThemeProvider>
+        }
+    }, [partyStarted, readyToStartParty]);
+
+    const footerContent = getFooterContent();
+
+    return (
+    <PartyVotesProvider>
+        <ThemeProvider theme={theme}>
+            {renderRedirectToHomepage()}
+            <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+                <Root config={mui_config}>
+                <Header
+                renderMenuIcon={(open: boolean) => (open ? <ChevronLeft /> : <MenuRounded />)}
+                >
+                {headerContent}  
+                </Header>
+                <Nav
+                renderIcon={(collapsed: boolean)=>
+                collapsed ? <ChevronRight /> : <ChevronLeft />
+                }
+                classes={drawerStyles}
+                >
+                    Nav
+                </Nav>
+                <StickyFooter contentBody={mainScreenContent} footerHeight={100} footer={footerContent}/>
+            </Root>
+            </div>
+        </ThemeProvider>
+    </PartyVotesProvider>
+    
     );
 }

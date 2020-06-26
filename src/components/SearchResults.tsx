@@ -2,6 +2,7 @@ import * as React from 'react';
 
 import { addTrackToParty } from '../scripts';
 import { SongInfo } from '../common/interfaces';
+import { PartyVotesContext } from '../common/partyVotesContext';
 
 interface Props {
     songs: SongInfo[],
@@ -9,9 +10,11 @@ interface Props {
 }
 
 export const SearchResults = (props: Props) => {
-
+    const partyVotesContext = React.useContext(PartyVotesContext);
     function trackAdded(track: SongInfo) {
         // TODO: change display icon
+        // upvote the song
+        partyVotesContext.updateVote(props.partyId, track, 'upvote');
     }
 
     function handleTrackFailedToAdd(track: SongInfo) {

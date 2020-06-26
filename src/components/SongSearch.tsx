@@ -3,6 +3,7 @@ import * as React from 'react';
 interface Props {
     initialSearchText: string,
     onSearchTextUpdated: (newSearchText: string) => void;
+    onStartSearch: () => void;
 }
 
 export const SongSearch = (props: Props) => {
@@ -12,5 +13,5 @@ export const SongSearch = (props: Props) => {
         setSearchText(newSearchText);
         props.onSearchTextUpdated(newSearchText);
     }
-    return <input value={searchText} onChange={onChange}/>;
+    return <input value={searchText} onChange={onChange} onFocus={props.onStartSearch}/>;
 };
