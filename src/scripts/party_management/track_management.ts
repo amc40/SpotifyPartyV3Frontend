@@ -120,3 +120,30 @@ export async function downvoteTrack(uri: string, partyId: string, callbacks: Vot
 export async function upvoteTrack(uri: string, partyId: string, callbacks: VoteTrackCallbacks) {
     vote('upvote', uri, partyId, callbacks);
 }
+
+export async function queueTrack(uri: string, accessToken: string, deviceId: string) {
+    console.log(`Queuing track ${uri}`);
+    const queueTrackResponse = await fetch(`https://api.spotify.com/v1/me/player/queue?uri=${uri}&device_id=${deviceId}`, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+        }
+    });
+    if (!queueTrackResponse.ok) {
+        throw new Error("Response code was not ok: " + queueTrackResponse.status);
+    }
+}
+
+export async function removeTrackFromParty(uri: string, partyId: string) {
+    const removeTrackResponse = await fetch(`${expressWSAddr}/api/party_tracks/${partyId}/${uri}`, {
+        method: 'DELETE',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+    });
+    if (!removeTrackResponse.ok) {
+        throw new Error("Response code was not ok: " + removeTrackResponse.status);
+    }
+} 

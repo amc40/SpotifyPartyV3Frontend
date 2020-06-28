@@ -1,7 +1,7 @@
 import React from "react";
 import { Redirect } from 'react-router-dom'
 import { ThemeProvider, CSSProperties } from "@material-ui/styles";
-import { createMuiTheme } from "@material-ui/core";
+import { createMuiTheme, Button } from "@material-ui/core";
 import { ChevronLeft, MenuRounded, ChevronRight } from "@material-ui/icons";
 import { Root, Header, Nav } from "mui-layout";
 import { makeStyles } from '@material-ui/styles';
@@ -9,14 +9,17 @@ import SpotifyWebApi from 'spotify-web-api-js';
 import lodash from "lodash";
 
 import "../styles.css";
-import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie } from '../common/constants';
+import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie, spotifyWhite, spotifyDark } from '../common/constants';
 import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken, getNewPartyId, getQueuedTracksForParty } from '../scripts';
 import { StickyFooter, SongSearch, SearchResults } from "./";
 // TODO: move to more appropriate location
 import mui_config from '../mui_config';
-import { SongInfo, QueuedSongInfo } from "../common/interfaces";
+import { SongInfo, QueuedSongInfo, Device, compareSongs } from "../common/interfaces";
 import { PartySongs } from "./PartySongs";
 import { PartyVotesProvider } from "../common/partyVotesContext";
+import { StartPartyDialog } from "./StartPartyDialog";
+import { buttonTheme } from "../common/themes";
+import { PartyPageFooter } from "./PartyPageFooter";
 
 const partySongRefreshMs = 500;
 
@@ -33,7 +36,7 @@ async function updateSongs(searchText: string): Promise<SongInfo[]>{
       return [];
     } else {
       // if access token has been set 
-      const res = await spotify.searchTracks(searchText, {limit: 10});
+      const res = await spotify.searchTracks(searchText, {limit: 15});
       const tracks = res.tracks.items.map((trackInfo) => { 
         return {
             name: trackInfo.name, 
@@ -52,8 +55,26 @@ async function updateSongs(searchText: string): Promise<SongInfo[]>{
   }
 } 
 
-export function PartyPage() {
+const useStyles = makeStyles({
+    paper: {
+        backgroundColor: '#030303',
+        color: 'white',
+        border: 'none',
+    },
 
+});
+
+const useButtonStyles = makeStyles(() => {
+    return {
+        button: {
+            fontSize: 16,
+            height: 50,
+        }
+    };
+});
+
+export function PartyPage() {
+    // if set to true will navigate the user to the homepage
     const [navigateToHomepage, setNavigateToHomepage] = React.useState(false); 
 
     const renderRedirectToHomepage = () => {
@@ -69,7 +90,7 @@ export function PartyPage() {
 
     function handleRefreshedToken(refreshToken: string, accessToken: string, refreshSeconds: number) {
         spotify.setAccessToken(accessToken);
-        setTimeout(refreshAccessToken, secondsBeforeActuallyRefreshAccessToken(refreshSeconds), refreshToken, {
+        setTimeout(refreshAccessToken, secondsBeforeActuallyRefreshAccessToken(refreshSeconds) * 1000, refreshToken, {
             handleRefreshedToken,
             handleFailedTokenRefresh
         });
@@ -84,21 +105,25 @@ export function PartyPage() {
     }
 
     function onPartyPageLoad() {
+        // get the access token, refresh token and refresh time from the cookies stored in the auth stage
         const accessToken = getCookie(spotifyAccessTokenCookie);
         const refreshTime = getCookie(spotifyAccessTokenRefreshTimeCookie);
         const refreshToken = getCookie(spotifyRefreshTokenCookie);
         console.log(`accessToken: ${accessToken}, refreshTime: ${refreshTime}, refreshToken: ${refreshToken}`);
         if (accessToken !== undefined && refreshTime !== undefined && refreshToken !== undefined) {
+            // if all are set then set the access token
             console.log('got access token, refresh time, and refresh token');
             spotify.setAccessToken(accessToken);
             const currentTime = new Date().getTime();
             const msToRefresh = parseInt(refreshTime) - currentTime;
+            // if the time to refresh is in the future then set up a task to refresh the access token then
             if (msToRefresh > 0) {
                 setTimeout(refreshAccessToken, msToRefresh, refreshToken, {
                     handleRefreshedToken,
                     handleFailedTokenRefresh
                 });
             } else {
+                // if token has already expired then refresh it now.
                 refreshAccessToken(refreshToken, {
                     handleRefreshedToken,
                     handleFailedTokenRefresh
@@ -116,9 +141,9 @@ export function PartyPage() {
         // TODO: display message
         setNavigateToHomepage(true);
     }
-
+    // the party id of the party the user is viewing
     const [partyId, setPartyId] = React.useState(undefined as undefined | string);
-
+    // TODO: move into when we create a party.
     React.useEffect(() => {
         getNewPartyId().then((newPartyId) => {
             if (newPartyId) {
@@ -130,18 +155,8 @@ export function PartyPage() {
         })
     }, []);
 
-    const useDrawerStyles = makeStyles({
-        paper: {
-        backgroundColor: '#030303',
-        color: 'white',
-        border: 'none',
-        },
-    });
-
-
-    const drawerStyles =  useDrawerStyles();
-
-    const initialSearchText = 'Search...';
+    
+    const drawerStyles =  useStyles();
 
     const [searching, setSearching] = React.useState(false);
 
@@ -192,6 +207,16 @@ export function PartyPage() {
         }
     }, [partyId]);
 
+    const [selectDeviceDialogOpen, setSelectDeviceDialogOpen] = React.useState(false);
+
+    function handleSelectDeviceDialogClose() {
+        setSelectDeviceDialogOpen(false);
+    }
+
+    // TODO: check spotify has auth token
+    const sortedTopSongs = partySongs.sort(compareSongs).reverse().slice();
+    const dialog = partyId ? <StartPartyDialog spotify={spotify} open={selectDeviceDialogOpen} handleClose={handleSelectDeviceDialogClose} topSong={sortedTopSongs[0]} secondTopSong={sortedTopSongs[1]} partyId={partyId}/> : undefined;
+
     function getMainScreenContent() {
         if (!partyId) {
             // party has not yet been initialised
@@ -199,10 +224,18 @@ export function PartyPage() {
         }
         if (searching) {
             // if we are searching display the search results
-            return <SearchResults songs={searchTracks} partyId={partyId}/>;
+            return (
+            <>
+                <SearchResults songs={searchTracks} partyId={partyId} partySongs={partySongs}/>
+                {dialog}
+            </>);
         } else {
             // otherwise we just view the songs in the party
-            return <PartySongs partyId={partyId} partySongs={partySongs}/>;
+            return (
+            <>
+                <PartySongs partyId={partyId} partySongs={partySongs}/>
+                {dialog}
+            </>);
         }
     }
 
@@ -212,65 +245,21 @@ export function PartyPage() {
         setSearching(false);
     }
 
-    const cancelSearchButton = searching ? 
-        <button onClick={handleSearchCancelled}>
-            Cancel
-        </button>
-        : undefined;
-
     const headerContent = (
         <>
             <SongSearch 
-                        initialSearchText={initialSearchText} 
+                        placeholder={'Add Song'} 
                         onSearchTextUpdated={lodash.debounce(handleSearch, 500)}
-                        onStartSearch={handleStartSearch}/>
-            {cancelSearchButton}
+                        onStartSearch={handleStartSearch}
+                        handleCancel={handleSearchCancelled}/>
         </>
     );
 
     //TODO: get initial state from server
     const [partyStarted, setPartyStarted] = React.useState(false);
 
-    const readyToStartParty = React.useCallback(() => {
-        return partySongs.length >= 2;
-    }, [partySongs])
+    const footerContent = <PartyPageFooter partyStarted={partyStarted} partySongs={partySongs} onStartParty={() => {setSelectDeviceDialogOpen(true);}} />;
 
-    const getFooterContent = React.useCallback(() => {
-        if (partyStarted) {
-            //TODO: fill with currently playing and next up
-            return <h2>TODO: fill with currently playing and next up</h2>;
-        } else {
-            // TODO: hosting as state.
-            const centredStyle: CSSProperties = {
-                display: 'flex',
-                justifyContent: 'center'
-            };
-            const hosting = true;
-            if (hosting) {
-                if (readyToStartParty()) {
-                    return (
-                        <div style={centredStyle}>
-                            <button>Start Party</button>
-                        </div>
-                    );
-                } else {
-                    return (
-                        <div style={centredStyle}>
-                            You must add at least 2 songs to start the party!
-                        </div>
-                    );
-                }
-            } else {
-                return (
-                    <div style={centredStyle}>
-                        Waiting for Host to Start ...
-                    </div>
-                );
-            }
-        }
-    }, [partyStarted, readyToStartParty]);
-
-    const footerContent = getFooterContent();
 
     return (
     <PartyVotesProvider>

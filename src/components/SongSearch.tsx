@@ -1,17 +1,26 @@
 import * as React from 'react';
+import { SearchBar } from './SearchBar';
 
 interface Props {
-    initialSearchText: string,
+    placeholder: string,
     onSearchTextUpdated: (newSearchText: string) => void;
     onStartSearch: () => void;
+    handleCancel: () => void;
 }
 
 export const SongSearch = (props: Props) => {
-    const [searchText, setSearchText] = React.useState(props.initialSearchText);
+    const { placeholder, onSearchTextUpdated, onStartSearch, handleCancel } = props;
+    const [searchText, setSearchText] = React.useState('');
     const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const newSearchText = e.target.value;
         setSearchText(newSearchText);
-        props.onSearchTextUpdated(newSearchText);
+        onSearchTextUpdated(newSearchText);
     }
-    return <input value={searchText} onChange={onChange} onFocus={props.onStartSearch}/>;
+
+    const onCancel = () => {
+        setSearchText('');
+        handleCancel();
+    }
+
+    return <SearchBar value={searchText} placeholder={placeholder} onChange={onChange} onFocus={onStartSearch} onCancel={onCancel}/>
 };

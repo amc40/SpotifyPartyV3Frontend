@@ -6,6 +6,7 @@ import FavoriteBorder from '@material-ui/icons/FavoriteBorder';
 import Checkbox from '@material-ui/core/Checkbox';
 import { upvoteTrack, VoteTrackCallbacks, downvoteTrack } from '../scripts';
 import { PartyVotesContext } from '../common/partyVotesContext';
+import { Typography } from '@material-ui/core';
 
 interface Props {
     songInfo: QueuedSongInfo;
@@ -61,10 +62,11 @@ export const PartySongInfo = (props: Props) => {
     }
 
     return (
-        <div key={uri}>
-            <span>{name}</span>
-            <span>
+        <div key={uri} style={{display: 'grid', gridGap: '0px 0px', gridTemplateColumns: '80% 20%', gridTemplateRows: '100%'}}>
+            <div style={{display: 'flex', alignItems: 'center', gridColumn: '1 span 1', gridRow: '1 span 1'}}><Typography align={'left'}>{name}</Typography></div>
+            <div style={{gridColumn: '2 span 1', gridRow: '1 span 1'}}>
                 <FormContolLabel
+                    style={{float: 'right'}}    
                     control={
                         <Checkbox 
                             checked={liked}
@@ -103,7 +105,7 @@ export const PartySongInfo = (props: Props) => {
                     label={votes}
                     labelPlacement="start"
                 />   
-            </span>
+            </div>
         </div>
     );
 }
