@@ -92,7 +92,7 @@ export const StartPartyDialog = (props: Props) => {
             console.error(e);
             setStartPartyState('select_device')
         }
-    }, [partyId, handleClose, spotify, topSong, secondTopSong]);
+    }, [partyId, handleClose, spotify, topSong, secondTopSong, setFirstSong, setNextQueuedSong, setPartyStarted]);
 
     switch (startPartyState) {
         case 'select_device':

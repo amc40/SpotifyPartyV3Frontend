@@ -4,7 +4,7 @@ import { addTrackToParty } from '../scripts';
 import { SongInfo, QueuedSongInfo } from '../common/interfaces';
 import { PartyVotesContext } from '../common/partyVotesContext';
 import { SongDisplayWithIcon } from './SongDisplayWithIcon';
-import { makeStyles, createStyles, Theme, IconButton, Divider } from '@material-ui/core';
+import { makeStyles, createStyles, IconButton, Divider } from '@material-ui/core';
 import { spotifyGreen, spotifyLightGrey } from '../common/constants';
 import AddCircleIcon from '@material-ui/icons/AddCircle';
 import { SongUpvoteButton } from './SongUpvoteButton';

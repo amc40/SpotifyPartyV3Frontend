@@ -76,10 +76,6 @@ export const GetDevicesDialogBody = (props: Props) => {
         
     }, [spotify, open]);
 
-    function handleDialogClose() {
-        props.handleClose();
-    }
-
     function handleDeviceSelected(device: Device) {
         console.log(`Selected device: ${device}`);
         props.handleDeviceSelected(device);

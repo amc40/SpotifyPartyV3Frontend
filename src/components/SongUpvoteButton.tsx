@@ -4,7 +4,7 @@ import { FavoriteBorder, Favorite } from "@material-ui/icons";
 import { upvoteTrack, downvoteTrack, VoteTrackCallbacks } from "../scripts";
 import FormContolLabel from '@material-ui/core/FormControlLabel'
 import { PartyVotesContext } from "../common/partyVotesContext";
-import { SongInfo, QueuedSongInfo } from "../common/interfaces";
+import { QueuedSongInfo } from "../common/interfaces";
 
 interface Props {
     songInfo: QueuedSongInfo;

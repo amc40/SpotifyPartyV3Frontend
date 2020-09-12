@@ -1,5 +1,4 @@
 import { makeStyles, createStyles } from "@material-ui/core"
-import { spotifyLightGrey } from "./constants";
 
 export const createCustomScrollbars = makeStyles(() =>
         createStyles({

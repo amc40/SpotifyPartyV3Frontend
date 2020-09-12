@@ -19,10 +19,9 @@ import { PartySongs } from "./PartySongs";
 import { PartyVotesProvider } from "../common/partyVotesContext";
 import { StartPartyDialog } from "./StartPartyDialog";
 import { PartyPageFooter } from "./PartyPageFooter";
-import { createCustomScrollbars } from "../common/styles";
 
 const partySongRefreshMs = 500;
-const currentPlayingTrackRefreshMs = 100;
+const currentPlayingTrackRefreshMs = 250;
 
 
 const spotify = new SpotifyWebApi();
@@ -208,7 +207,7 @@ export function PartyPage() {
             await removeTrackFromParty(mostPopularSong.uri, partyId);
         }
         
-    }, [partySongs]);
+    }, [partySongs, partyId]);
 
     React.useEffect(() => {
         if (expectedNextTrack === undefined && partySongs.length > 0) {
@@ -340,7 +339,7 @@ export function PartyPage() {
                     console.error(e);
                 }
                 
-            }, partySongRefreshMs);
+            }, currentPlayingTrackRefreshMs);
             // removes after component is unmounted.
             return () => {
                 clearInterval(refreshCurrentTrack);

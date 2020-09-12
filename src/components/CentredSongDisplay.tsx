@@ -1,4 +1,3 @@
-import classes from "*.module.css";
 import { createStyles, makeStyles, Typography } from "@material-ui/core";
 import React from "react";
 import { spotifyMinorTextGrey } from "../common/constants";
