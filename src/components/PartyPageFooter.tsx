@@ -1,16 +1,25 @@
 import React, { CSSProperties } from 'react';
-import { QueuedSongInfo } from '../common/interfaces';
+import { QueuedSongInfo, SongInfo } from '../common/interfaces';
 import { ThemeProvider, Button } from '@material-ui/core';
 import { buttonTheme } from '../common/themes';
+import { CentredSongDisplay } from './CentredSongDisplay';
 
 interface Props {
     partyStarted: boolean;
     partySongs: QueuedSongInfo[];
     onStartParty: () => void;
+    currentTrack: SongInfo | undefined;
 }
 
+const centredStyle: CSSProperties = {
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%'
+};
+
 export const PartyPageFooter = (props: Props) => {
-    const { partyStarted, partySongs, onStartParty } = props;
+    const { partyStarted, partySongs, onStartParty, currentTrack } = props;
 
     const readyToStartParty = React.useCallback(() => {
         return partySongs.length >= 2;
@@ -18,15 +27,20 @@ export const PartyPageFooter = (props: Props) => {
 
     if (partyStarted) {
         //TODO: fill with currently playing and next up
-        return <h2>TODO: fill with currently playing and next up</h2>;
+        if (currentTrack) {
+            return (
+                <div style={{marginTop: '10px'}}>
+                    <CentredSongDisplay song={currentTrack}></CentredSongDisplay>
+                </div>
+                
+            );
+        } else {
+            return <h2> Please resync </h2>; 
+        }
+        
     } else {
         // TODO: hosting as state.
-        const centredStyle: CSSProperties = {
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            height: '100%'
-        };
+        
         const hosting = true;
         if (hosting) {
             if (readyToStartParty()) {

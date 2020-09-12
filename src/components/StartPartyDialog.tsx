@@ -6,7 +6,7 @@ import { Loading } from './Loading';
 import { SongInfo, Device } from '../common/interfaces';
 import { AddingSongs } from './AddingSongs';
 import { queueTrack, removeTrackFromParty } from '../scripts';
-import { emptyPlaylistUri, silentTrackUri } from '../common/constants';
+import { silentTrackUri } from '../common/constants';
 
 interface Props {
     spotify: SpotifyWebApi.SpotifyWebApiJs;
@@ -15,6 +15,9 @@ interface Props {
     topSong: SongInfo;
     secondTopSong: SongInfo;
     partyId: string;
+    setFirstSong: (firstSong: SongInfo) => void;
+    setNextQueuedSong: (nextQueuedSong: SongInfo) => void;
+    setPartyStarted: () => void;
 }
 
 async function queueSongs(spotify: SpotifyWebApi.SpotifyWebApiJs, songs: ReadonlyArray<SongInfo>, device: Device) {
@@ -52,7 +55,7 @@ async function removeQueuedTracks(partyId: string, songs: SongInfo[]) {
 }
 
 export const StartPartyDialog = (props: Props) => {
-    const { spotify, open, handleClose, topSong, secondTopSong, partyId } = props;
+    const { spotify, open, handleClose, topSong, secondTopSong, partyId, setFirstSong, setNextQueuedSong, setPartyStarted } = props;
 
     const initialPartyState = React.useCallback(() => {
         return open ? 'select_device' : undefined;
@@ -78,8 +81,11 @@ export const StartPartyDialog = (props: Props) => {
             await queueSongs(spotify, songsToQueue, device);
             setStartPartyState('clearing_queue');
             await clearCurrentPlayback(device, spotify, topSong);
+            setFirstSong(topSong);
+            setNextQueuedSong(secondTopSong);
             setStartPartyState('updating_server');
             await removeQueuedTracks(partyId, songsToQueue);
+            setPartyStarted();
             handleClose();
         } catch (e) {
             console.error('Failed to queue');

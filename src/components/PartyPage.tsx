@@ -1,7 +1,7 @@
 import React from "react";
 import { Redirect } from 'react-router-dom'
-import { ThemeProvider, CSSProperties } from "@material-ui/styles";
-import { createMuiTheme, Button } from "@material-ui/core";
+import { ThemeProvider } from "@material-ui/styles";
+import { createMuiTheme } from "@material-ui/core";
 import { ChevronLeft, MenuRounded, ChevronRight } from "@material-ui/icons";
 import { Root, Header, Nav } from "mui-layout";
 import { makeStyles } from '@material-ui/styles';
@@ -9,19 +9,20 @@ import SpotifyWebApi from 'spotify-web-api-js';
 import lodash from "lodash";
 
 import "../styles.css";
-import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie, spotifyWhite, spotifyDark } from '../common/constants';
-import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken, getNewPartyId, getQueuedTracksForParty } from '../scripts';
+import { spotifyAccessTokenCookie, spotifyAccessTokenRefreshTimeCookie, spotifyRefreshTokenCookie } from '../common/constants';
+import { getCookie, refreshAccessToken, secondsBeforeActuallyRefreshAccessToken, getNewPartyId, getQueuedTracksForParty, queueTrack, removeTrackFromParty } from '../scripts';
 import { StickyFooter, SongSearch, SearchResults } from "./";
 // TODO: move to more appropriate location
 import mui_config from '../mui_config';
-import { SongInfo, QueuedSongInfo, Device, compareSongs } from "../common/interfaces";
+import { SongInfo, QueuedSongInfo, compareSongs } from "../common/interfaces";
 import { PartySongs } from "./PartySongs";
 import { PartyVotesProvider } from "../common/partyVotesContext";
 import { StartPartyDialog } from "./StartPartyDialog";
-import { buttonTheme } from "../common/themes";
 import { PartyPageFooter } from "./PartyPageFooter";
+import { createCustomScrollbars } from "../common/styles";
 
 const partySongRefreshMs = 500;
+const currentPlayingTrackRefreshMs = 100;
 
 
 const spotify = new SpotifyWebApi();
@@ -64,24 +65,24 @@ const useStyles = makeStyles({
 
 });
 
-const useButtonStyles = makeStyles(() => {
-    return {
-        button: {
-            fontSize: 16,
-            height: 50,
-        }
-    };
-});
 
 export function PartyPage() {
     // if set to true will navigate the user to the homepage
-    const [navigateToHomepage, setNavigateToHomepage] = React.useState(false); 
+    const [navigateToHomepage, setNavigateToHomepage] = React.useState(false);
 
     const renderRedirectToHomepage = () => {
         if (navigateToHomepage) {
             return <Redirect to='/' />;
         }
     }
+
+    //TODO: get initial state from server
+    const [partyStarted, setPartyStarted] = React.useState(false);
+
+    // represents whether SpotifyParty is currently dictating the playback.
+    // TODO: have resync dialog when desynchronised
+    const [playbackSynchronised, setPlaybackSynchronised] = React.useState(true);
+
 
     function handleMissingCookies() {
         //navigate home if don't have necessary cookies
@@ -155,6 +156,14 @@ export function PartyPage() {
         })
     }, []);
 
+    // currentTrack contains the currently playing track, undefined if none is currently playing
+    const [currentTrack, setCurrentTrack] = React.useState(undefined as undefined | SongInfo);
+
+    // expected next track is used to keep track what the next song we expect to be playing if the queuing has worked correctly.
+    // if it hasn't it could be due to loss of connection with the backend or the user manually changing the playback.
+    // if this happens we give the user the option to 'resync'
+    const [expectedNextTrack, setExpectedNextTrack] = React.useState(undefined as undefined | SongInfo)
+
     
     const drawerStyles =  useStyles();
 
@@ -186,6 +195,29 @@ export function PartyPage() {
         setPartySongs(newTracks);
     }
 
+    
+    const queueMostPopularTrack =  React.useCallback(async () => {
+        if (partyId) {
+            const sortedTopSongs = partySongs.sort(compareSongs).reverse().slice();
+            const mostPopularSong = sortedTopSongs[0];
+            console.log(`Sorted songs:`);
+            console.log(partySongs);
+            console.log(`Queueing the most popular song: ${mostPopularSong.name}`);
+            await queueTrack(mostPopularSong.uri, spotify.getAccessToken() as string);
+            setExpectedNextTrack(mostPopularSong);
+            await removeTrackFromParty(mostPopularSong.uri, partyId);
+        }
+        
+    }, [partySongs]);
+
+    React.useEffect(() => {
+        if (expectedNextTrack === undefined && partySongs.length > 0) {
+            // if there is no current next track, and the party songs now contain a song then queue that song.
+            console.log(`Added ${partySongs[0].name} when there were no songs in the queue, queuing it.`)
+            queueMostPopularTrack();
+        }
+    }, [partySongs, expectedNextTrack, queueMostPopularTrack]);
+
     React.useEffect(() => {
         if (partyId) {
             console.log('setting up refresh of tracks.');
@@ -215,7 +247,17 @@ export function PartyPage() {
 
     // TODO: check spotify has auth token
     const sortedTopSongs = partySongs.sort(compareSongs).reverse().slice();
-    const dialog = partyId ? <StartPartyDialog spotify={spotify} open={selectDeviceDialogOpen} handleClose={handleSelectDeviceDialogClose} topSong={sortedTopSongs[0]} secondTopSong={sortedTopSongs[1]} partyId={partyId}/> : undefined;
+    const dialog = partyId ? 
+        <StartPartyDialog spotify={spotify} 
+            open={selectDeviceDialogOpen}
+            handleClose={handleSelectDeviceDialogClose}
+            topSong={sortedTopSongs[0]}
+            secondTopSong={sortedTopSongs[1]}
+            partyId={partyId}
+            setFirstSong={setCurrentTrack}
+            setNextQueuedSong={setExpectedNextTrack}
+            setPartyStarted={() => setPartyStarted(true)}
+            /> : undefined;
 
     function getMainScreenContent() {
         if (!partyId) {
@@ -255,10 +297,59 @@ export function PartyPage() {
         </>
     );
 
-    //TODO: get initial state from server
-    const [partyStarted, setPartyStarted] = React.useState(false);
+    
 
-    const footerContent = <PartyPageFooter partyStarted={partyStarted} partySongs={partySongs} onStartParty={() => {setSelectDeviceDialogOpen(true);}} />;
+    React.useEffect(() => {
+        if (partyId && partyStarted && currentTrack) {
+            const refreshCurrentTrack = setInterval(async () => {
+                console.log('refreshing current playing track.');
+                try {
+                    const currentTrackRes = await spotify.getMyCurrentPlayingTrack();
+                    if (currentTrackRes.is_playing) {
+                        if (currentTrackRes.item?.uri !== currentTrack.uri ) {
+                            console.log('different track is playing.');
+                            // different track is playing
+                            if (expectedNextTrack) {
+                                console.log('there is a queued track.');
+                                // there is a queued track
+                                if (currentTrackRes.item?.uri === expectedNextTrack?.uri) {
+                                    console.log(`the playing track is the one expected: ${expectedNextTrack.name}, updating the .`);
+                                    // the song playing is the one we expected
+                                    setCurrentTrack(expectedNextTrack);
+                                    // update the queue
+                                    if (partySongs.length > 0) {
+                                        // if there are songs in the party, queue the most popular one
+                                        queueMostPopularTrack();
+                                    } else {
+                                        setExpectedNextTrack(undefined);
+                                    }
+                                } else {
+                                    console.log('the playing track is NOT the one expected.');
+                                    // the song playing is not the next one queued, dysynced.
+                                    setPlaybackSynchronised(false);
+                                }
+                            } else {
+                                console.log('there is NOT a queued track.');
+                                // there was not another song added to the party, will be playing from recommended songs - desynced
+                                setPlaybackSynchronised(false);
+                            }
+                            
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+                
+            }, partySongRefreshMs);
+            // removes after component is unmounted.
+            return () => {
+                clearInterval(refreshCurrentTrack);
+                console.log('clearing refresh of current track on unmount');
+            };
+        }
+    }, [partyId, partyStarted, currentTrack, expectedNextTrack, partySongs.length, queueMostPopularTrack]);
+
+    const footerContent = <PartyPageFooter partyStarted={partyStarted} partySongs={partySongs} onStartParty={() => {setSelectDeviceDialogOpen(true);}} currentTrack={currentTrack} />;
 
 
     return (

@@ -121,15 +121,20 @@ export async function upvoteTrack(uri: string, partyId: string, callbacks: VoteT
     vote('upvote', uri, partyId, callbacks);
 }
 
-export async function queueTrack(uri: string, accessToken: string, deviceId: string) {
+export async function queueTrack(uri: string, accessToken: string, deviceId?: string) {
     console.log(`Queuing track ${uri}`);
-    const queueTrackResponse = await fetch(`https://api.spotify.com/v1/me/player/queue?uri=${uri}&device_id=${deviceId}`, {
+    let queueSongUrl = `https://api.spotify.com/v1/me/player/queue?uri=${uri}`
+    if (deviceId) {
+        queueSongUrl += `&device_id=${deviceId}`
+    }
+    const queueTrackResponse = await fetch(queueSongUrl, {
         method: 'POST',
         headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
         }
     });
+    console.log('Queue track response:', queueTrackResponse);
     if (!queueTrackResponse.ok) {
         throw new Error("Response code was not ok: " + queueTrackResponse.status);
     }

@@ -6,6 +6,9 @@ export const createDefaultPartyVotesContext = (): PartyVotesContextProps => {
         parties: [],
         updateVote: (partyId: string, song: SongInfo, voteType: 'upvote' | 'downvote') => {
             console.warn('Attempted to update votes, but there was no provider.'); 
+        },
+        hasUserUpvotedSong: (partyId: string, song: SongInfo) => {
+            return false;
         }
     };
 }
@@ -65,6 +68,20 @@ export const PartyVotesProvider: React.StatelessComponent = props => {
                                 setPartyVotes(updatedPartyVotes);
                             }
                         }
+                    }
+                },
+                hasUserUpvotedSong: function (partyId: string, song: SongInfo) {
+                    const partyVotes = this.parties.find(partyVotes => partyVotes.partyId === partyId);
+                    if (!partyVotes) {
+                        console.log(`There is no party with the id ${partyId} in partyVotes context.
+                        Therefore there are no liked songs for that party.`);
+                        // there are no upvoted songs for the party
+                        return false;
+                    } else {
+                        const val = partyVotes.upvotedSongs
+                        .some(songVote => songVote.uri === song.uri);
+                        console.log('party votes:', partyVotes, '. Checking if there is a uri:', song.uri, val);
+                        return val;
                     }
                 }
             }

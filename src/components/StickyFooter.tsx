@@ -2,6 +2,7 @@ import * as React from 'react';
 import CSS from 'csstype';
 import mui_config from '../mui_config';
 import {Content} from 'mui-layout';
+import { createCustomScrollbars } from '../common/styles';
 
 interface Props {
     contentBody: React.ReactNode;
@@ -27,7 +28,6 @@ export const StickyFooter = (props: Props) => {
         // height: contentHeight,
         gridColumn: '1 / span 1',
         gridRow: '1 / span 1',
-        overflowY: 'scroll',
         padding: '20px',
         backgroundImage: 'linear-gradient(to bottom, rgb(60, 60, 60), #121212)',
         color: 'white'
@@ -42,9 +42,11 @@ export const StickyFooter = (props: Props) => {
 
     };
 
+    const customScrollbarClasses = createCustomScrollbars();
+
     return (
         <Content style={outerDivStyle}>
-            <div style={contentStyle}>
+            <div className={customScrollbarClasses.customScrollbar} style={contentStyle}>
                 {props.contentBody}
             </div>
             <div style={footerStyle}>

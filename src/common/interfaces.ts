@@ -34,6 +34,7 @@ export interface PartyVotes {
 export interface PartyVotesContextProps {
     parties: PartyVotes[];
     updateVote: (partyId: string, song: SongInfo, voteType: 'upvote' | 'downvote') => void;
+    hasUserUpvotedSong: (partyId: string, song: SongInfo) => boolean;
 }
 
 export interface Device {
