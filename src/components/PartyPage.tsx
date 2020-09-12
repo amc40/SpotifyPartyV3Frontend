@@ -209,13 +209,14 @@ export function PartyPage() {
         
     }, [partySongs, partyId]);
 
+
     React.useEffect(() => {
-        if (expectedNextTrack === undefined && partySongs.length > 0) {
+        if (partyStarted && expectedNextTrack === undefined && partySongs.length > 0) {
             // if there is no current next track, and the party songs now contain a song then queue that song.
             console.log(`Added ${partySongs[0].name} when there were no songs in the queue, queuing it.`)
             queueMostPopularTrack();
         }
-    }, [partySongs, expectedNextTrack, queueMostPopularTrack]);
+    }, [partyStarted, partySongs, expectedNextTrack, queueMostPopularTrack]);
 
     React.useEffect(() => {
         if (partyId) {
