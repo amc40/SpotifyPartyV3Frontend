@@ -2,7 +2,10 @@ import React from 'react';
 import { CircularProgress, Typography } from '@material-ui/core';
 import { CSSProperties } from '@material-ui/core/styles/withStyles';
 
+// component for a loading icon with the given text below it.
+
 interface Props {
+    // the text to display with the loading icon
     text: string;
 }
 

@@ -4,7 +4,7 @@ import SpotifyWebApi from 'spotify-web-api-js';
 interface Props {
     spotify: SpotifyWebApi.SpotifyWebApiJs;
 }
-
+// component to display all the active devices.
 export function ActiveDevices(props: Props) {
     const [activeDevices, setActiveDevices] = React.useState([] as string[]);
     const spotify = props.spotify;

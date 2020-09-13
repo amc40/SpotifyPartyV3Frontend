@@ -4,7 +4,8 @@ interface NewAccessTokenCallbacks {
     handleNewAccessToken(accessToken: string, refreshSeconds: number, refreshToken: string) : void;
     handleAccessTokenFetchFailure(): void;
 }
-
+// gets a new access token from the express back end, used if we have not yet been issued an access token
+// calls the appropriate callback on success (with the new token) or failure.
 export async function getNewAccessToken(authorizationCode: string, callbacks: NewAccessTokenCallbacks) {
     console.log('getting access token');
     const spotifyTokenData = new URLSearchParams();
@@ -36,7 +37,8 @@ interface refreshTokenCallback {
     handleRefreshedToken(refreshToken: string, accessToken: string, refreshSeconds: number): void;
     handleFailedTokenRefresh(refreshToken: string): void;
 }
-
+// refresh access token with a refresh token obtained from the last refresh or new access token.
+// calls the appropriate callback on success or failure.
 export async function refreshAccessToken(refreshToken: string, callbacks: refreshTokenCallback) {
     console.log('refreshing access token with refresh token ' + refreshToken);
     const spotifyTokenData = new URLSearchParams();

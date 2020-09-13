@@ -3,6 +3,9 @@ import { SongInfo } from '../common/interfaces';
 import { Typography, makeStyles, createStyles } from '@material-ui/core';
 import { spotifyMinorTextGrey } from '../common/constants';
 
+// displays the song information on the left, with a given icon on the right
+// will fill parent div.
+
 interface Props {
     song: SongInfo;
     getIcon: (song: SongInfo) => JSX.Element | undefined;

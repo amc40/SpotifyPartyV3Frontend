@@ -1,10 +1,16 @@
 import * as React from 'react';
 import { SearchBar } from './SearchBar';
 
+// search bar wrapper which converts onChange events into searchTextUpdated with the new text.
+
 interface Props {
+    // placeholder string to display when there is no text
     placeholder: string,
+    // when the user changes the search text
     onSearchTextUpdated: (newSearchText: string) => void;
+    // when the user starts to search
     onStartSearch: () => void;
+    // when the user cancels searching
     handleCancel: () => void;
 }
 

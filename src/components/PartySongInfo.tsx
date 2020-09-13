@@ -8,6 +8,7 @@ interface Props {
     partyId: string;
 }
 
+// displays the song info on the left of a fixed-size div with the specified icon on the right.
 export const PartySongInfo = (props: Props) => {
     const { partyId, songInfo } = props;
 

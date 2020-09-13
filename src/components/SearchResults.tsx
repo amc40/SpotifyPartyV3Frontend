@@ -9,9 +9,14 @@ import { spotifyGreen, spotifyLightGrey } from '../common/constants';
 import AddCircleIcon from '@material-ui/icons/AddCircle';
 import { SongUpvoteButton } from './SongUpvoteButton';
 
+
+// displays the results of a search
+
 interface Props {
+    // the results of the search
     songs: SongInfo[];
     partyId: string;
+    // the songs already in the party so we don't add multiple times.
     partySongs: QueuedSongInfo[];
 }
 

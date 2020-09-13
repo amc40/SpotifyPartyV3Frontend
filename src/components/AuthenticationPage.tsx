@@ -4,6 +4,11 @@ import { Redirect } from "react-router-dom";
 import { getNewAccessToken } from '../scripts';
 import { setSpotifyAuthCookies } from '../scripts';
 
+
+// component for the authentication page which will redirect to the party if
+// url params contain necessary tokens from redirecting to spotify,
+// otherwise will redirect to home.
+
 export function AuthenticationPage() {
     const [navigateToHomepage, setNavigateToHomepage] = React.useState(false);
     const [navigateToPartyPage, setNavigateToPartyPage] = React.useState(false);

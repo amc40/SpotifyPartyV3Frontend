@@ -6,8 +6,13 @@ import FormContolLabel from '@material-ui/core/FormControlLabel'
 import { PartyVotesContext } from "../common/partyVotesContext";
 import { QueuedSongInfo } from "../common/interfaces";
 
+// component to display a song upvote button, will 
+// register upvotes with the back-end on press
+
 interface Props {
+    // the song which is being upvoted or downvoted
     songInfo: QueuedSongInfo;
+    // the id of the party
     partyId: string;
 }
 

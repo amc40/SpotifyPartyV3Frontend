@@ -4,6 +4,8 @@ import { DialogTitle, ListItem, Avatar, ListItemAvatar, ListItemText, List, Dial
 import { DeviceUnknown, DriveEta, Computer, Tablet, Smartphone, Memory, Tv, SettingsInputComponent, CastConnected, Games } from '@material-ui/icons';
 import { Device } from '../common/interfaces';
 
+// displays a dialog with a list of active devices for the given user, which they can select.
+
 const refreshDeviceIntervalMs = 500;
 
 interface Props {

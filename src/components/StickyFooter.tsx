@@ -4,9 +4,14 @@ import mui_config from '../mui_config';
 import {Content} from 'mui-layout';
 import { createCustomScrollbars } from '../common/styles';
 
+// component for page body with a footer which sticks to the bottom of the screen.
+
 interface Props {
+    // the main body of the page, will scroll if larger than space present
     contentBody: React.ReactNode;
+    // the content of the footer
     footer: React.ReactNode;
+    // the height of the footer
     footerHeight: number;
 }
 

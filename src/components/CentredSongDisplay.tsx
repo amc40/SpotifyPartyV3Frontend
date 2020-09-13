@@ -3,6 +3,8 @@ import React from "react";
 import { spotifyMinorTextGrey } from "../common/constants";
 import { SongInfo } from "../common/interfaces";
 
+// component to display song details centred
+
 interface Props {
     song: SongInfo;
 };

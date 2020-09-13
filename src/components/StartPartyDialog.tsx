@@ -8,15 +8,28 @@ import { AddingSongs } from './AddingSongs';
 import { queueTrack, removeTrackFromParty } from '../scripts';
 import { silentTrackUri } from '../common/constants';
 
+// component which displays a start party dialog which will ask the user to select a device
+// then clear anything remaining on their playback queue until we get to the desired song.
+
+
 interface Props {
+    // the spotify instance for the host, properly authenticated
     spotify: SpotifyWebApi.SpotifyWebApiJs;
+    // whether the dialog is open
     open: boolean;
+    // when the dialog is queued
     handleClose: () => void;
+    // most upvoted song
     topSong: SongInfo;
+    // second most upvoted song
     secondTopSong: SongInfo;
+    // the partyid of the party
     partyId: string;
+    // a function which allows us to set the first song in the parent
     setFirstSong: (firstSong: SongInfo) => void;
+    // a function which allows us to set the song queued after the first in the parent
     setNextQueuedSong: (nextQueuedSong: SongInfo) => void;
+    // indicates that the party has been started.
     setPartyStarted: () => void;
 }
 
@@ -31,6 +44,7 @@ interface SongUri {
     uri: string;
 }
 
+// ckears what is on our current playback, up until the first song
 async function clearCurrentPlayback(device: Device, spotify: SpotifyWebApi.SpotifyWebApiJs, firstSong: SongInfo) {
     let currentSong;
     do {
@@ -48,6 +62,7 @@ async function clearCurrentPlayback(device: Device, spotify: SpotifyWebApi.Spoti
     console.log('Found current song.');
 }
 
+// removes all the queued tracks from the party so they won't be queued multiple times.
 async function removeQueuedTracks(partyId: string, songs: SongInfo[]) {
     for (const songToRemove of songs) {
         await removeTrackFromParty(songToRemove.uri, partyId);
@@ -72,18 +87,23 @@ export const StartPartyDialog = (props: Props) => {
     const handleDeviceSelected = React.useCallback(async (device: Device) => {
         setStartPartyState('clearing_queue');
         try {
+            // starts playback on the specified device
             await spotify.play({
                 device_id: device.id,
                 uris: [silentTrackUri]
             });
+            // add the top and second top songs
             setStartPartyState('adding_songs');
             const songsToQueue = [topSong, secondTopSong]
             await queueSongs(spotify, songsToQueue, device);
             setStartPartyState('clearing_queue');
+            // clears the current playback queue up until the first queued song
+            // TODO: does not take into account if already have that song in queue
             await clearCurrentPlayback(device, spotify, topSong);
             setFirstSong(topSong);
             setNextQueuedSong(secondTopSong);
             setStartPartyState('updating_server');
+            // remove the songs we have added from the party
             await removeQueuedTracks(partyId, songsToQueue);
             setPartyStarted();
             handleClose();

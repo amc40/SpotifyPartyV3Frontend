@@ -1,5 +1,5 @@
 import  { expressWSAddr } from '../../common/constants'
-
+// gets a new party id, returns undefined if could not fetch
 export async function getNewPartyId() {
     try {
         const createPartyResponse = await fetch(expressWSAddr + '/api/party', {

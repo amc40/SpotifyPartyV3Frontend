@@ -13,6 +13,7 @@ interface AddTrackPayload {
     artistNames: string[],
 }
 
+// adds a track to the given party, callbacks are called on success or failure, as appropriate
 export async function addTrackToParty(songInfo: SongInfo, partyId: string, callbacks: AddTrackToPartyCallbacks) {
     try {
         const addTrackResponse = await fetch(`${expressWSAddr}/api/party_tracks/${partyId}`, {
@@ -51,6 +52,7 @@ interface Track {
     votes: Number;
 }
 
+// gets all the queued tracks for the given party, callbacks are called on success or failure, as appropriate
 export async function getQueuedTracksForParty(partyId: string, callbacks: GetQueuedTracksForPartyCallbacks) {
     console.log('getting queued tracks');
     try {
@@ -89,6 +91,8 @@ export interface VoteTrackCallbacks {
     handleFailedVote(): void;
 }
 
+// registers a vote of the specified type, for the song with the given uri in the party with the specified id,
+// on completion calls the success or failure callback, as appropriate
 async function vote(voteType : 'upvote' | 'downvote', uri: string, partyId: string, callbacks: VoteTrackCallbacks) {
     try {
         const upvoteTrackResponse = await fetch(`${expressWSAddr}/api/party_tracks/${voteType}/${partyId}`, {
@@ -110,17 +114,16 @@ async function vote(voteType : 'upvote' | 'downvote', uri: string, partyId: stri
         callbacks.handleFailedVote();
     }
 }
-
+// a wrapper for vote with voteType as 'downvote'
 export async function downvoteTrack(uri: string, partyId: string, callbacks: VoteTrackCallbacks) {
     vote('downvote', uri, partyId, callbacks);
 }
 
-
-
+// a wrapper for vote with voteType as 'upvote'
 export async function upvoteTrack(uri: string, partyId: string, callbacks: VoteTrackCallbacks) {
     vote('upvote', uri, partyId, callbacks);
 }
-
+// queues the specified track on the host's playback
 export async function queueTrack(uri: string, accessToken: string, deviceId?: string) {
     console.log(`Queuing track ${uri}`);
     let queueSongUrl = `https://api.spotify.com/v1/me/player/queue?uri=${uri}`
@@ -139,7 +142,7 @@ export async function queueTrack(uri: string, accessToken: string, deviceId?: st
         throw new Error("Response code was not ok: " + queueTrackResponse.status);
     }
 }
-
+// removes the track with the specified uri from the list of tracks in the party (those that the user can vote on).
 export async function removeTrackFromParty(uri: string, partyId: string) {
     const removeTrackResponse = await fetch(`${expressWSAddr}/api/party_tracks/${partyId}/${uri}`, {
         method: 'DELETE',

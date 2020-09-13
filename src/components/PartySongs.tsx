@@ -2,6 +2,8 @@ import React from 'react';
 import { PartySongInfo } from './PartySongInfo';
 import { QueuedSongInfo, compareSongs } from '../common/interfaces';
 
+// displays all the party songs.
+
 interface Props {
     partyId: string;
     partySongs: QueuedSongInfo[];

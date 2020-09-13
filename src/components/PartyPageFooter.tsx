@@ -11,6 +11,12 @@ interface Props {
     currentTrack: SongInfo | undefined;
 }
 
+// the footer for the party page.
+// at the start of a party will display a message
+// saying that you must add at least 2 songs.
+// then will display a button to open the start party dialog.
+// once the party has begun will display the current song.
+
 const centredStyle: CSSProperties = {
     display: 'flex',
     justifyContent: 'center',
@@ -26,7 +32,6 @@ export const PartyPageFooter = (props: Props) => {
     }, [partySongs]);
 
     if (partyStarted) {
-        //TODO: fill with currently playing and next up
         if (currentTrack) {
             return (
                 <div style={{marginTop: '10px'}}>
@@ -39,7 +44,7 @@ export const PartyPageFooter = (props: Props) => {
         }
         
     } else {
-        // TODO: hosting as state.
+        // TODO: hosting as property, with state hosted in party page.
         
         const hosting = true;
         if (hosting) {
